@@ -1,0 +1,58 @@
+<pre>
+.
+└── tf-laravel
+    ├── README.me
+    └── envs
+        ├── dev  // 開発
+        ├── prod // 本番
+        └── stg  // 検証
+            └── app // ECR ECSクラスタ ECS関連のIAMロール管理
+                └── foobar
+</pre>
+
+### タグについて
+以下のtagsのvalueを変更すれば、明示指定しない場合、各サービスにタグがdefault設定される。
+
+```sh
+# provider.tf
+default_tags { # 3.38以降は共通タグが付けられるようになった
+      tags = {
+        Env = "stg"
+        System = "projectA"
+      }
+    }
+```
+### providerのtfState.stateへの読み込みのため、シンボリックリンク作成
+```sh
+$ cd stg or prod or dev/app/foobar
+$ ln -fs ../../provider.tf provider.tf
+```
+### 環境全体で利用する変数をshared_locals.tfで管理し、各環境にシンボリックリンク作成
+```sh
+$ cd stg or prod or dev/app/foobar
+$ ln -fs ../../shared_locals.tf shared_locals.tf
+```
+### 命名規則
+#### terraform リソース名
+- スネークケース
+- 小文字・数字
+- リソースの種類を名前に含めない ex) resource "aws_ecr_repository" "ecr_nginx"
+- その種類のリソースだけを作成する場合は、thisをつける
+#### AWS リソース名
+- ケバブケース
+- リソースの種類を名前に含めない
+- {システム名}-{環境名}-{サービス名}のプレフィックスをつける
+
+### コマンド
+#### tfstateで管理しているリソース一覧確認
+```sh
+$ terraform state list
+```
+#### 引数で指定したリソースに対して、tfstate上での属性・値を確認
+```sh
+$ terraform state show aws_ecr_repository.nginx
+```
+#### 全体のリソース情報確認
+```sh
+$ terraform state pull > tmp.tfstate #多い時ようにファイル出力
+```
