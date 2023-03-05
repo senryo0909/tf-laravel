@@ -1,0 +1,1 @@
+data "aws_region" "current" {} #dataでaws_region取得しsubnet作成時に使用
