@@ -1,0 +1,102 @@
+name: deploy
+
+on:
+  push:
+    branches:
+      # - main
+      # - develop
+      # - feature/push_images_to_ecr
+      # - feature/deploy_fargate # ecspressでサービス更新用とし、更新時以外はコメントアウト
+
+env:
+  AWS_REGION: ap-northeast-1
+  IMAGE_TAG: ${{ github.sha }}
+  SYSTEM_NAME: projectA
+  SERVICE_NAME: foobar
+
+jobs:
+  deploy:
+    name: Deploy app to AWS Fargate
+    runs_on: ubuntu-latest
+
+    steps:
+      - name: Configure aws credentials for stg
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.STG_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.STG_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secret.STG_AWS_ASSUME_ROLE_ARN }} # /app_foobarで作成したgithub用のIAMユーザーに権限をassumeする
+          role-duration-seconds: 1800 # assumeの有効時間
+      
+      - name: Set env vars for prd
+        # if: github.ref == 'ref/heads/main'
+        # run: echo "ENV_NAME=prd" >> $GITHUB_ENV #この方法はstep全体で使える環境変数の定義ができる。env:のディレクティブ定義はそのステップ内でしか有効にならない
+      
+      - name: Set env vars for stg
+        # if: github.ref == 'ref/heads/develop'
+        # run: echo "ENV_NAME=stg" >> $GITHUB_ENV #この方法はstep全体で使える環境変数の定義ができる。env:のディレクティブ定義はそのステップ内でしか有効にならない
+      
+      - uses: actions/checkout@v2
+      - run: |
+          docker-compose up -d --build app web
+
+      - name: Cache-composer
+        id: Cache-composer
+        uses: actions:cache@v2
+        with:
+          path: backend/vendor
+          key: composer-v1-${{ hasFiles('backend/composer.lock')}}
+      - run: docker-compose exec -T app composer install -n --prefer-dist --no-dev
+        if: ${{ !steps.Cache-composer.outputs.cache-hit }}
+
+      - name: Cache-npm
+        id: cache-npm-ci
+        uses: actions/cache@v2
+        with:
+          path: backend/node_modules
+          key: npm-v1-${{ hashFiles('backend/package.lock.json') }}
+      
+      - run: docker-compose exec -T web npm ci
+        if: ${{ !steps.cache-npm-ci.outputs.cache-hit }}
+
+      - run: docker-compose exec -T web npm run prod #ファイルサイズをトランスパイルで小さくする
+
+      - uses: aws-actions/amazon-ecr-login@v1
+        id: amazon-ecr-login
+      
+      - name: Push Nginx Image to Ecr
+        env:
+          DOCKER_BUILDKIT: 1
+          ECR_REGISTRY: ${{ steps.amazon-ecr-login.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.SYSTEM_NAME }}-${{ env.ENV_NAME }}-${{ env.SERVICE_NAME }}-nginx
+        run: |
+          docker build \
+            --cache-from=$ECR_REGISTRY/$ECR_REPOSITORY:latest --build-arg DOCKER_BUILDKIT_INLINE_CACHE=1 . \
+            -f infra/docker/nginx/Dockerfile \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      
+      - name: Push PHP Image to Ecr
+        env:
+          DOCKER_BUILDKIT: 1
+          ECR_REGISTRY: ${{ steps.amazon-ecr-login.outputs.registry }}
+          ECR_REPOSITORY: ${{ env.SYSTEM_NAME }}-${{ env.ENV_NAME }}-${{ env.SERVICE_NAME }}-php
+        run: |
+          docker build \
+            --cache-from=$ECR_REGISTRY/$ECR_REPOSITORY:latest --build-arg DOCKER_BUILDKIT_INLINE_CACHE=1 . \
+            -f infra/docker/php/Dockerfile \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      - name: Download ecspresso
+        uses: kayac/ecspresso@v0
+        with:
+          version: v2.0.4
+      
+      - name: Deploy to ecs
+        run: ecspress deploy --config config_$ENV_NAME.yaml
+        working-directory: ./app/ecspresso
