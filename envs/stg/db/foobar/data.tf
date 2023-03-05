@@ -1,0 +1,12 @@
+data "aws_kms_alias" "rds" {
+    name = "alias/aws/rds"
+}
+
+data "terraform_remote_state" "network_main" {
+    backend = "s3"
+    config = {
+        bucket = "projectsa"                                #なければ事前に作成
+        key    = "${local.system_name}/${local.env_name}/network/main_v1.0.0.tfstate" #保存先パス
+        region = "ap-northeast-1"
+    }
+}
