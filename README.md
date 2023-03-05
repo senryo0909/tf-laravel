@@ -1,14 +1,97 @@
 <pre>
 .
-└── tf-laravel
-    ├── README.me
-    ├── infra // applicationコード
-    └── envs
-        ├── dev  // 開発
-        ├── prod // 本番
-        └── stg  // 検証
-            └── app // ECR ECSクラスタ ECS関連のIAMロール管理
-                └── foobar
+tf-laravel
+    ├── README.md
+    ├── envs
+    │   ├── dev
+    │   ├── prod
+    │   └── stg
+    │       ├── app
+    │       │   └── foobar
+    │       │       ├── backend.tf
+    │       │       ├── data.tf
+    │       │       ├── ecr.tf
+    │       │       ├── ecs.tf
+    │       │       ├── iam.tf
+    │       │       ├── locals.tf
+    │       │       ├── provider.tf -> ../../provider.tf
+    │       │       ├── shared_locals.tf -> ../../shared_locals.tf
+    │       │       └── variables.tf
+    │       ├── cicd
+    │       │   └── app_foobar
+    │       │       ├── backend.tf
+    │       │       ├── data.tf
+    │       │       ├── ecspresso.tf
+    │       │       ├── iam.tf
+    │       │       ├── locals.tf
+    │       │       ├── provider.tf -> ../../provider.tf
+    │       │       └── shared_locals.tf -> ../../shared_locals.tf
+    │       ├── db
+    │       │   └── foobar
+    │       │       ├── backend.tf
+    │       │       ├── data.tf
+    │       │       ├── db_instance.tf
+    │       │       ├── db_option_group.tf
+    │       │       ├── db_parameter_group.tf
+    │       │       ├── iam.tf
+    │       │       ├── locals.tf
+    │       │       ├── provider.tf -> ../../provider.tf
+    │       │       └── shared_locals.tf -> ../../shared_locals.tf
+    │       ├── log
+    │       │   ├── alb
+    │       │   │   ├── backend.tf
+    │       │   │   ├── data.tf
+    │       │   │   ├── outputs.tf
+    │       │   │   ├── provider.tf -> ../../provider.tf
+    │       │   │   ├── s3.tf
+    │       │   │   ├── shared_locals.tf -> ../../shared_locals.tf
+    │       │   │   └── variables.tf
+    │       │   ├── app_foobar
+    │       │   │   ├── backend.tf
+    │       │   │   ├── cloudwatch_log.tf
+    │       │   │   ├── locals.tf
+    │       │   │   ├── provider.tf -> ../../provider.tf
+    │       │   │   └── shared_locals.tf -> ../../shared_locals.tf
+    │       │   └── db_foobar
+    │       │       ├── backend.tf
+    │       │       ├── cloudwatch_log.tf
+    │       │       ├── locals.tf
+    │       │       ├── provider.tf -> ../../provider.tf
+    │       │       └── shared_locals.tf -> ../../shared_locals.tf
+    │       ├── network
+    │       │   └── main
+    │       │       ├── backend.tf
+    │       │       ├── data.tf
+    │       │       ├── db_subnet_group.tf
+    │       │       ├── eip.tf
+    │       │       ├── internet_gateway.tf
+    │       │       ├── locals.tf
+    │       │       ├── nat_gateway.tf
+    │       │       ├── outputs.tf
+    │       │       ├── provider.tf -> ../../provider.tf
+    │       │       ├── route_table.tf
+    │       │       ├── security_group.tf
+    │       │       ├── shared_locals.tf -> ../../shared_locals.tf
+    │       │       ├── subnet.tf
+    │       │       ├── variables.tf
+    │       │       └── vpc.tf
+    │       ├── provider.tf
+    │       ├── routing
+    │       │   └── domain_name
+    │       │       ├── acm.tf
+    │       │       ├── alb.tf
+    │       │       ├── backend.tf
+    │       │       ├── data.tf
+    │       │       ├── outputs.tf
+    │       │       ├── provider.tf -> ../../provider.tf
+    │       │       ├── route53.tf
+    │       │       └── shared_locals.tf -> ../../shared_locals.tf
+    │       └── shared_locals.tf
+    └── modules 
+        └── ecr
+            ├── main.tf
+            ├── outputs.tf
+            └── variables.tf
 </pre>
 
 ### タグについて
